@@ -22,3 +22,72 @@ angular.module('starter', ['ionic'])
     }
   });
 })
+.controller('MainCtrl', function($scope, $document) {
+    console.log('MainCtrl Loaded.');
+
+    var SERVER_URL = 'ws://localhost:7007';
+    var ws;
+
+    $scope.showNameInput = true;
+    $scope.showChatScreen = false;
+    $scope.messageLog = '';
+    $scope.userName = '';
+
+    /** Toggles between the name and message input screens. */
+    function toggleScreens() {
+        $scope.showNameInput = !$scope.showNameInput;
+        $scope.showChatScreen = !$scope.showChatScreen;
+    }
+
+    /** Connect to the WebSocket Server. */
+    function connect() {
+        ws = new WebSocket(SERVER_URL, []);
+        ws.onmessage = handleMessageReceived;
+        ws.onopen = handleConnected;
+        ws.onerror = handleError;
+    }
+
+    function handleMessageReceived(data) {
+        logMessage(data.data);
+    }
+
+    function handleConnected(data) {
+        var logMsg = 'Connected to server: ' + data.target.url;
+        logMessage(logMsg)
+    }
+
+    function handleError(err) {
+        console.log("Error: ", err);
+    }
+
+    /** Adds a new line to the message log. */
+    function logMessage(msg) {
+        $scope.$apply(function() {
+            $scope.messageLog = $scope.messageLog + msg + "\n";
+            updateScrolling();
+        });
+    }
+
+    /** Updates the scrolling so the latest message is visible. */
+    function updateScrolling() {
+        // NOTE: This is not really best practice... In your rela app, you
+        // would have this logic in the directive.
+        var msgLogId = '#messageLog';
+        var msgLog = $document[0].querySelector(msgLogId);
+        msgLog.scrollTop = msgLog.scrollHeight;
+    }
+
+    /** Submit the users name. */
+    $scope.submitName = function submitName(name) {
+        if (!name) {
+            return;
+        }
+        $scope.userName = name;
+        connect();
+        toggleScreens();
+    }
+
+    $scope.sendMessage = function sendMessage(msg) {
+        ws.send($scope.userName + ": " + msg);
+    }
+})
